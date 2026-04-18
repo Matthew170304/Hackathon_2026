@@ -9,3 +9,4 @@ __pycache__/
 .ruff_cache/
 dist/
 build/
+Danfoss_AI_Safety_MVP_API_Plan.md
