@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./safety_intelligence.db"
     ai_provider: str = "mock"
     translator_provider: str = "mock"
+    openai_api_key: str | None = None
+    hazard_ai_model: str = "gpt-4o-mini"
 
     model_config = SettingsConfigDict(
         env_file=".env",
