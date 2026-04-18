@@ -18,6 +18,7 @@ class HazardAIClient:
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = settings.hazard_ai_model
 
+    # noinspection PyTypeChecker
     async def complete_json(
         self,
         system_prompt: str,
