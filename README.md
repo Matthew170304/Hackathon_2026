@@ -7,7 +7,7 @@ FastAPI backend MVP for the Danfoss AI Safety Intelligence API.
 Activate the virtual environment:
 
 ```bash
-cd /Users/matus/Desktop/Hackathon_2026
+cd your_path/Hackathon_2026
 source .venv/bin/activate
 ```
 
