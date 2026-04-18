@@ -14,6 +14,7 @@ from app.domain.enums import (
 )
 from app.repositories.incident_repository import IncidentRepository
 from app.schemas.incident_schemas import IncidentCreateRequest, ProcessedIncidentResponse
+from app.services.emailnotificationservice import EmailNotificationService, EmailSendError
 from app.services.incident_processing import IncidentProcessingService
 
 
@@ -42,6 +43,22 @@ async def get_incident(
     if processed is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     return _to_response(processed)
+
+
+@router.post("/{incident_id}/notify-manager")
+async def notify_manager(
+    incident_id: UUID,
+    session: Session = Depends(get_db_session),
+) -> dict[str, str]:
+    service = EmailNotificationService(session)
+    try:
+        service.send_manager_notification_for_incident(incident_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except EmailSendError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {"status": "sent"}
 
 
 def _to_response(processed: ProcessedIncident) -> ProcessedIncidentResponse:

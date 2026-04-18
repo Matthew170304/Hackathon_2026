@@ -7,3 +7,11 @@ services:
       - "8000:8000"
     volumes:
       - ./safety_intelligence.db:/app/safety_intelligence.db
+    depends_on:
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
