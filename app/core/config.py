@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./safety_intelligence.db"
     ai_provider: str = "mock"
     translator_provider: str = "mock"
+    deepl_api_key: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -31,3 +32,5 @@ def get_settings() -> Settings:
     """
     return Settings()
 
+
+settings = get_settings()

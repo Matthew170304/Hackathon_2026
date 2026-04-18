@@ -1,86 +1,66 @@
-import logging
+from __future__ import annotations
+
+import re
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
-# ISO 639-1 codes for languages used at Danfoss sites
 SUPPORTED_LANGUAGE_CODES = {
-    "pt",  # Portuguese
-    "da",  # Danish
-    "en",  # English
-    "pl",  # Polish
-    "de",  # German
-    "nl",  # Dutch
-    "bg",  # Bulgarian
-    "ro",  # Romanian
-    "zh",  # Chinese
-    "es",  # Spanish
+    "en",
+    "da",
+    "pl",
+    "sl",
+    "zh",
+    "de",
+    "nl",
+    "bg",
+    "ro",
+    "es",
+    "pt",
 }
+
+_CHINESE_PATTERN = re.compile(r"[\u4e00-\u9fff]")
+_CYRILLIC_PATTERN = re.compile(r"[\u0400-\u04ff]")
+_DANISH_PATTERN = re.compile(r"[æøå]|\b(ikke|hånd|arbejde|maskine|adgang)\b", re.IGNORECASE)
+_POLISH_PATTERN = re.compile(r"[ąćęłńóśźż]|\b(zgłosił|maszyna|wypadek|awaria|pracownik)\b", re.IGNORECASE)
+_SLOVENIAN_PATTERN = re.compile(r"[čšž]|\b(nesreča|delavec|napaka|stroj)\b", re.IGNORECASE)
+_ROMANIAN_PATTERN = re.compile(r"[ăâîșț]|\b(angajat|utilaj|accident|defecțiune)\b", re.IGNORECASE)
+_SPANISH_PATTERN = re.compile(r"[ñáéíóú]|\b(trabajador|incidente|máquina|riesgo)\b", re.IGNORECASE)
+_PORTUGUESE_PATTERN = re.compile(r"[ãõç]|\b(trabalhador|incidente|máquina|risco)\b", re.IGNORECASE)
+_GERMAN_PATTERN = re.compile(r"[äöüß]|\b(maschine|unfall|arbeiter|gefahr)\b", re.IGNORECASE)
+_DUTCH_PATTERN = re.compile(r"\b(het|een|niet|werknemer|machine|ongeval)\b", re.IGNORECASE)
+_ENGLISH_PATTERN = re.compile(r"\b(the|and|with|incident|worker|machine|safety)\b", re.IGNORECASE)
 
 
 class LanguageService:
-    """
-    Detects the source language of incident text and decides whether
-    translation to English is required.
-
-    MVP strategy:
-      1. Try langdetect (lightweight, offline, no API key required).
-      2. Fall back to None if detection fails or text is too short.
-
-    Replace detect_language() body to plug in Azure Cognitive Services,
-    Google Cloud Translation detect, or any other provider.
-    """
-
     def detect_language(self, text: str) -> Optional[str]:
-        """
-        Detect source language from text.
-
-        Args:
-            text: Cleaned analysis text from TextCleaningService.
-
-        Returns:
-            ISO 639-1 language code (e.g. "en", "da", "pl", "zh").
-            None if language cannot be detected (text too short, ambiguous,
-            or detection library not available).
-        """
-        if not text or len(text.strip()) < 10:
-            logger.debug("Text too short for language detection, returning None.")
+        if not text or len(text.strip()) < 12:
             return None
 
-        try:
-            from langdetect import detect, LangDetectException  # type: ignore
+        normalized_text = text.strip()
 
-            code = detect(text)
-            logger.debug("langdetect result: %s", code)
-            return code
-        except ImportError:
-            logger.warning(
-                "langdetect not installed. "
-                "Run `pip install langdetect` or swap in another provider. "
-                "Falling back to None."
-            )
-            return None
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Language detection failed: %s", exc)
-            return None
+        if _CHINESE_PATTERN.search(normalized_text):
+            return "zh"
+        if _CYRILLIC_PATTERN.search(normalized_text):
+            return "bg"
+        if _DANISH_PATTERN.search(normalized_text):
+            return "da"
+        if _POLISH_PATTERN.search(normalized_text):
+            return "pl"
+        if _SLOVENIAN_PATTERN.search(normalized_text):
+            return "sl"
+        if _ROMANIAN_PATTERN.search(normalized_text):
+            return "ro"
+        if _SPANISH_PATTERN.search(normalized_text):
+            return "es"
+        if _PORTUGUESE_PATTERN.search(normalized_text):
+            return "pt"
+        if _GERMAN_PATTERN.search(normalized_text):
+            return "de"
+        if _DUTCH_PATTERN.search(normalized_text):
+            return "nl"
+        if _ENGLISH_PATTERN.search(normalized_text):
+            return "en"
+
+        return None
 
     def should_translate(self, language_code: Optional[str]) -> bool:
-        """
-        Decide whether translation to English is needed.
-
-        Args:
-            language_code: ISO 639-1 code returned by detect_language(),
-                           or None when detection was not possible.
-
-        Returns:
-            True  – language is known, non-English → translation required.
-            False – language is English, unknown/None, or unsupported
-                    (safe default: do not translate when uncertain).
-        """
-        if language_code is None:
-            return False
-        if language_code == "en":
-            return False
-        # Translate any recognised non-English Danfoss-site language.
-        # Unknown/exotic codes → False (safe default, avoid corrupting text).
-        return language_code in SUPPORTED_LANGUAGE_CODES
+        return language_code is not None and language_code != "en" and language_code in SUPPORTED_LANGUAGE_CODES
