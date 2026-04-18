@@ -1,5 +1,5 @@
 from app.domain.enums import RecurrenceFrequency, SeverityLevel
-from app.services.risk_scoring_service import RiskScoringService
+from app.services.risk_scoring import RiskScoringService
 
 
 def test_get_severity_base_score() -> None:

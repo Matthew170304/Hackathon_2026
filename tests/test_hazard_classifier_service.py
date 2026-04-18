@@ -4,7 +4,7 @@ import pytest
 
 from app.domain.enums import HazardCategory
 from app.integrations.hazard_ai_client import HazardAIClient
-from app.services.hazard_classifier_service import AIHazardClassifierService
+from app.services.hazard import AIHazardClassifierService
 
 
 pytestmark = pytest.mark.integration

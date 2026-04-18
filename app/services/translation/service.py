@@ -83,17 +83,20 @@ class TranslationService:
             return text
 
         try:
-            result = self._translator.translate_to_english(
+            translation_result = self._translator.translate_to_english(
                 text,
                 source_language=source_language,
             )
-            if inspect.isawaitable(result):
-                result = await result
-            if isinstance(result, str):
-                return result
-            translated_text = getattr(result, "text", None)
+            if inspect.isawaitable(translation_result):
+                translation_result = await translation_result
+
+            if isinstance(translation_result, str):
+                return translation_result
+
+            translated_text = getattr(translation_result, "text", None)
             if isinstance(translated_text, str):
                 return translated_text
+
             return text
         except Exception:
             return text

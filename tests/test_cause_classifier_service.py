@@ -1,7 +1,7 @@
 import pytest
 
 from app.domain.enums import CauseCategory
-from app.services.cause_classifier_service import (
+from app.services.cause import (
     AICauseClassifierService,
     CauseRuleClassifierService,
     HybridCauseClassifierService,

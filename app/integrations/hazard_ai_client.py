@@ -113,9 +113,14 @@ def _classify_cause_prompt(prompt: str) -> Dict[str, Any]:
     else:
         label = "Unknown"
 
+    if label == "Unknown":
+        confidence = 0.2
+    else:
+        confidence = 0.8
+
     return {
         "label": label,
-        "confidence": 0.8 if label != "Unknown" else 0.2,
+        "confidence": confidence,
         "explanation": "Local rule fallback used because no AI client is configured.",
     }
 
@@ -144,8 +149,13 @@ def _classify_hazard_prompt(prompt: str) -> Dict[str, Any]:
     else:
         label = "Unknown"
 
+    if label == "Unknown":
+        confidence = 0.2
+    else:
+        confidence = 0.8
+
     return {
         "label": label,
-        "confidence": 0.8 if label != "Unknown" else 0.2,
+        "confidence": confidence,
         "explanation": "Local rule fallback used because no AI client is configured.",
     }

@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.language_service import LanguageService
+from app.services.language import LanguageService
 
 
 class TestLanguageService:

@@ -1,5 +1,5 @@
 from app.schemas.incident_schemas import IncidentCreateRequest
-from app.services.text_cleaning_service import TextCleaningService
+from app.services.text_cleaning import TextCleaningService
 
 
 def test_clean_text_returns_empty_string_for_none_and_placeholders():

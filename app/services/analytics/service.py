@@ -42,6 +42,8 @@ OBSERVABILITY_MULTIPLIER = {
     "low": 1.25,
 }
 
+# These scores are intentionally simple. They are not a prediction model.
+# They make the ranking auditable for hackathon/demo use.
 SEVERITY_WEIGHT = {
     "Very low": 1,
     "Low": 5,
@@ -160,7 +162,13 @@ class AnalyticsService:
 
         actions = []
         for cluster in clusters[:10]:
-            timeframe = "7 days" if cluster.max_risk_score > 100 else "30 days" if cluster.max_risk_score > 40 else "90 days"
+            if cluster.max_risk_score > 100:
+                timeframe = "7 days"
+            elif cluster.max_risk_score > 40:
+                timeframe = "30 days"
+            else:
+                timeframe = "90 days"
+
             actions.append(
                 RoadmapAction(
                     timeframe=timeframe,
@@ -224,10 +232,14 @@ class AnalyticsService:
             if occurred_on < date_from or occurred_on > date_to:
                 continue
 
-            if location_filter and location_filter not in " ".join(
-                value or ""
-                for value in (incident.location, incident.country, incident.site)
-            ).lower():
+            incident_location_text = " ".join(
+                [
+                    incident.location or "",
+                    incident.country or "",
+                    incident.site or "",
+                ]
+            ).lower()
+            if location_filter and location_filter not in incident_location_text:
                 continue
 
             records.append(item)
@@ -452,6 +464,8 @@ class AnalyticsService:
         )
 
     def _strategic_priorities(self, records) -> list[StrategicPriority]:
+        # Group incidents into patterns. A pattern is easier to act on than one row.
+        # Example: "Nordborg + Maintenance + Electrical + Workplace Design".
         grouped: dict[tuple, list] = defaultdict(list)
         for item in records:
             incident = item.incident
@@ -466,24 +480,31 @@ class AnalyticsService:
         priorities = []
         for key, items in grouped.items():
             site, activity, hazard, cause = key
+
+            # Basic risk evidence from the cluster.
             scores = [item.risk_score or 0 for item in items]
-            average_risk = sum(scores) / len(scores) if scores else 0
-            max_risk = max(scores) if scores else 0
+            if scores:
+                average_risk = sum(scores) / len(scores)
+                max_risk = max(scores)
+            else:
+                average_risk = 0
+                max_risk = 0
+
             critical_count = sum(1 for score in scores if score > 100)
+
+            # Observation bias: low-observability hazards get a higher weight.
+            # Example: exposed wiring is easier to miss than a wet floor.
             observability = OBSERVABILITY_BY_HAZARD.get(hazard, "low")
-            frequency_score = min(len(items) * 8, 40)
-            severity_score = max(SEVERITY_WEIGHT.get(item.severity_level, 0) for item in items)
-            recurrence_score = max(RECURRENCE_WEIGHT.get(item.recurrence_frequency, 0) for item in items) * 5
-            hidden_multiplier = OBSERVABILITY_MULTIPLIER[observability]
             confidence = self._cluster_confidence(items)
-            priority_score = (
-                frequency_score
-                + (average_risk * 0.35)
-                + (max_risk * 0.25)
-                + (critical_count * 15)
-                + severity_score
-                + recurrence_score
-            ) * hidden_multiplier * (0.75 + confidence * 0.25)
+            priority_score = self._calculate_priority_score(
+                item_count=len(items),
+                average_risk=average_risk,
+                max_risk=max_risk,
+                critical_count=critical_count,
+                observability=observability,
+                confidence=confidence,
+                items=items,
+            )
             evidence_case_ids = [
                 item.incident.external_case_id or item.incident_id
                 for item in items
@@ -516,6 +537,40 @@ class AnalyticsService:
         for index, priority in enumerate(priorities, start=1):
             priority.rank = index
         return priorities[:12]
+
+    @staticmethod
+    def _calculate_priority_score(
+        item_count: int,
+        average_risk: float,
+        max_risk: int,
+        critical_count: int,
+        observability: str,
+        confidence: float,
+        items,
+    ) -> float:
+        frequency_points = min(item_count * 8, 40)
+        average_risk_points = average_risk * 0.35
+        maximum_risk_points = max_risk * 0.25
+        critical_case_points = critical_count * 15
+        severity_points = max(SEVERITY_WEIGHT.get(item.severity_level, 0) for item in items)
+        recurrence_points = max(
+            RECURRENCE_WEIGHT.get(item.recurrence_frequency, 0)
+            for item in items
+        ) * 5
+
+        base_score = (
+            frequency_points
+            + average_risk_points
+            + maximum_risk_points
+            + critical_case_points
+            + severity_points
+            + recurrence_points
+        )
+
+        hidden_risk_multiplier = OBSERVABILITY_MULTIPLIER[observability]
+        confidence_multiplier = 0.75 + confidence * 0.25
+
+        return round(base_score * hidden_risk_multiplier * confidence_multiplier, 2)
 
     @staticmethod
     def _evidence_for_ai(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -632,13 +687,20 @@ class AnalyticsService:
         max_risk: int,
         observability: str,
     ) -> StrategicAction:
-        priority = "Critical" if max_risk > 100 else "High" if max_risk > 40 else "Medium"
-        timeframe = "7 days" if priority == "Critical" else "30 days" if priority == "High" else "90 days"
-        validation = (
-            " Include targeted verification because this is a low-observability hazard."
-            if observability == "low"
-            else ""
-        )
+        if max_risk > 100:
+            priority = "Critical"
+            timeframe = "7 days"
+        elif max_risk > 40:
+            priority = "High"
+            timeframe = "30 days"
+        else:
+            priority = "Medium"
+            timeframe = "90 days"
+
+        validation = ""
+        if observability == "low":
+            validation = " Include targeted verification because this is a low-observability hazard."
+
         return StrategicAction(
             priority=priority,
             owner_type=self._owner(hazard),
@@ -677,77 +739,6 @@ class AnalyticsService:
             for name, count in sorted(counts.items(), key=lambda item: item[1], reverse=True)
         ]
         return f"{label}: " + "; ".join(parts)
-
-    @staticmethod
-    def _top_related_cause(records, hazard: str) -> str:
-        counts: dict[str, int] = defaultdict(int)
-        for item in records:
-            if item.hazard_category == hazard:
-                counts[item.cause_category] += 1
-        if not counts:
-            return "Unknown"
-        return max(counts, key=counts.get)
-
-    @staticmethod
-    def _risk_signal(records, hazard: str) -> str:
-        scores = [item.risk_score or 0 for item in records if item.hazard_category == hazard]
-        if not scores:
-            return "Unknown"
-        if max(scores) > 100:
-            return "Critical potential present"
-        if max(scores) > 40:
-            return "High potential present"
-        return "Observed pattern with lower scored potential"
-
-    def _strategic_actions(
-        self,
-        records,
-        hazard_counts: dict[str, int],
-        cause_counts: dict[str, int],
-    ) -> list[StrategicAction]:
-        if not records:
-            return [
-                StrategicAction(
-                    priority="Medium",
-                    owner_type="EHS",
-                    timeframe="30 days",
-                    action="Run targeted observation campaigns before concluding the period has low risk.",
-                    reason="No processed reports matched the filter, which may indicate low reporting rather than low risk.",
-                    expected_impact="Improves visibility of weak signals and reporting barriers.",
-                )
-            ]
-
-        top_hazard = max(hazard_counts, key=hazard_counts.get)
-        top_cause = max(cause_counts, key=cause_counts.get) if cause_counts else "Unknown"
-        max_risk = max(item.risk_score or 0 for item in records)
-        priority = "Critical" if max_risk > 100 else "High" if max_risk > 40 else "Medium"
-
-        return [
-            StrategicAction(
-                priority=priority,
-                owner_type=self._owner(top_hazard),
-                timeframe="7 days" if priority == "Critical" else "30 days",
-                action=f"Launch a focused prevention sprint on {top_hazard}, especially where linked to {top_cause}.",
-                reason="This is the strongest observed pattern in the selected period.",
-                expected_impact="Reduces the most visible recurring exposure and creates fast learning for similar areas.",
-            ),
-            StrategicAction(
-                priority="High",
-                owner_type="EHS",
-                timeframe="30 days",
-                action="Validate underreported high-energy hazards through targeted inspections and supervisor interviews.",
-                reason="Observation data overrepresents easy-to-see issues and may miss rare but severe scenarios.",
-                expected_impact="Finds hidden risk before it appears in incident counts.",
-            ),
-            StrategicAction(
-                priority="Medium",
-                owner_type="Management",
-                timeframe="90 days",
-                action="Compare report volume by site, shift, and team against headcount and exposure hours.",
-                reason="Low reporting areas may reflect reporting friction or culture, not safer work.",
-                expected_impact="Improves confidence in the safety intelligence layer and reduces blind spots.",
-            ),
-        ]
 
     @staticmethod
     def _owner(hazard_category: str) -> str:

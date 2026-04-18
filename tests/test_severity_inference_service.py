@@ -1,7 +1,7 @@
 import asyncio
 
 from app.domain.enums import HazardCategory, SeverityLevel
-from app.services.severity_inference_service import (
+from app.services.severity_inference import (
     SeverityInferenceService,
     SeverityRuleInferenceService,
 )

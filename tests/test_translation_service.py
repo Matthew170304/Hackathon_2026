@@ -1,7 +1,7 @@
 import pytest
 
 from app.schemas.incident_schemas import IncidentCreateRequest
-from app.services.translation_service import TranslationService
+from app.services.translation import TranslationService
 
 
 class FakeTranslator:

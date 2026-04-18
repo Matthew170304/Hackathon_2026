@@ -1,7 +1,7 @@
 import asyncio
 
 from app.domain.enums import RecurrenceFrequency
-from app.services.recurrence_inference_service import (
+from app.services.recurrence_inference import (
     RecurrenceInferenceService,
     RecurrenceRuleInferenceService,
 )

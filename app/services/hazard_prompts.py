@@ -1,3 +1,0 @@
-from app.services.hazard.prompts import HAZARD_CLASSIFICATION_SYSTEM_PROMPT
-
-__all__ = ["HAZARD_CLASSIFICATION_SYSTEM_PROMPT"]

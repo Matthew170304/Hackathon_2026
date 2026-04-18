@@ -26,34 +26,37 @@ class ExcelIngestionService:
         return pd.read_excel(BytesIO(file_bytes), sheet_name=sheet_name or 0)
 
     def map_row_to_incident(self, row: pd.Series) -> IncidentCreateRequest:
-        data = {str(key).strip().lower(): self._empty_to_none(value) for key, value in row.items()}
+        row_values = {}
+        for key, value in row.items():
+            column_name = str(key).strip().lower()
+            row_values[column_name] = self._empty_to_none(value)
 
         return IncidentCreateRequest(
-            external_case_id=self._first(data, "case no.", "case no", "case id", "id"),
-            case_type=self._first(data, "case type", "type"),
-            location=self._first(data, "location", "site", "site location"),
-            responsible_entity=self._first(data, "responsible entity", "responsible unit", "business unit"),
+            external_case_id=self._first(row_values, "case no.", "case no", "case id", "id"),
+            case_type=self._first(row_values, "case type", "type"),
+            location=self._first(row_values, "location", "site", "site location"),
+            responsible_entity=self._first(row_values, "responsible entity", "responsible unit", "business unit"),
             occurred_at=self._parse_datetime(
-                self._first(data, "occurred at", "incident date", "date and time", "date", "created")
+                self._first(row_values, "occurred at", "incident date", "date and time", "date", "created")
             ),
-            title=self._first(data, "title", "case title", "short description"),
-            description=self._first(data, "description", "case description", "event description"),
-            activity=self._first(data, "activity", "work activity"),
-            severity_level=self._first(data, "severity", "severity level", "risk severity"),
+            title=self._first(row_values, "title", "case title", "short description"),
+            description=self._first(row_values, "description", "case description", "event description"),
+            activity=self._first(row_values, "activity", "work activity"),
+            severity_level=self._first(row_values, "severity", "severity level", "risk severity"),
             recurrence_frequency=self._first(
-                data,
+                row_values,
                 "recurrence",
                 "frequency",
                 "recurrence frequency",
                 "most probable recurrence frequency",
             ),
-            classification=self._first(data, "classification", "case classification"),
-            cause_category=self._first(data, "cause category", "root cause category"),
-            cause=self._first(data, "cause", "root cause"),
-            immediate_actions=self._first(data, "immediate actions", "immediate action"),
-            action_description=self._first(data, "action description", "corrective action"),
+            classification=self._first(row_values, "classification", "case classification"),
+            cause_category=self._first(row_values, "cause category", "root cause category"),
+            cause=self._first(row_values, "cause", "root cause"),
+            immediate_actions=self._first(row_values, "immediate actions", "immediate action"),
+            action_description=self._first(row_values, "action description", "corrective action"),
             validation_description=self._first(
-                data,
+                row_values,
                 "validation description",
                 "validation description(actions)",
                 "validation",
@@ -86,7 +89,11 @@ class ExcelIngestionService:
                 failed_rows += 1
                 errors.append(ExcelRowError(row_number=int(index) + 2, error=str(exc)))
 
-        status = "processed" if failed_rows == 0 else "failed" if processed_rows == 0 else "processed"
+        if processed_rows == 0 and failed_rows > 0:
+            status = "failed"
+        else:
+            status = "processed"
+
         self.batch_repository.update_progress(
             batch.id,
             processed_rows=processed_rows,

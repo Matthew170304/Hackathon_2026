@@ -25,21 +25,26 @@ class IncidentProcessingService:
         self.recommendations = RecommendationService()
 
     async def process_incident(self, incident: IncidentCreateRequest) -> ProcessingResult:
+        # Step 1: Prepare the text that every later service will analyze.
         cleaned_text = self.text_cleaning.build_analysis_text(incident)
+
+        # Step 2: Translate only when the source text appears to be non-English.
         original_language = self.language.detect_language(cleaned_text)
         should_translate = self.language.should_translate(original_language)
         translation_language = original_language if should_translate else None
-
         translated_title, translated_description = await self.translation.translate_incident_fields(
             incident,
             source_language=translation_language,
         )
+
+        # Step 3: Give classifiers both original context and English translation.
         analysis_text = self._build_classifier_text(
             cleaned_text=cleaned_text,
             translated_title=translated_title,
             translated_description=translated_description,
         )
 
+        # Step 4: Enrich the incident with safety intelligence.
         hazard_result = await self.hazard_classifier.classify_hazard(
             text=analysis_text,
             activity=incident.activity,
@@ -61,11 +66,14 @@ class IncidentProcessingService:
             activity=incident.activity,
         )
 
+        # Step 5: Convert severity and recurrence into the Danfoss risk score.
         risk_score = self.risk_scoring.calculate_risk_score(
             severity_result.severity_level,
             recurrence_result.recurrence_frequency,
         )
         risk_label = self.risk_scoring.get_risk_level_label(risk_score)
+
+        # Step 6: Create one action recommendation for this incident.
         recommendation = self.recommendations.generate_incident_recommendation(
             hazard_category=hazard_result.label,
             cause_category=cause_result.label,
