@@ -3,7 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.routes.analytics_routes import router as analytics_router
 from app.api.routes.health_routes import router as health_router
+from app.api.routes.incident_routes import router as incident_router
+from app.api.routes.upload_routes import router as upload_router
 from app.core.config import get_settings
 from app.db.database import create_database_tables
 
@@ -31,6 +34,9 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(health_router)
+    application.include_router(incident_router)
+    application.include_router(upload_router)
+    application.include_router(analytics_router)
 
     return application
 

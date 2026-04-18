@@ -10,22 +10,22 @@ from app.domain.enums import (
 )
 
 class IncidentCreateRequest(BaseModel):
-    external_case_id: str | None
-    case_type: str | None
-    location: str | None
-    responsible_entity: str | None
-    occurred_at: datetime | None
-    title: str
-    description: str
-    activity: str | None
-    severity_level: str | None
-    recurrence_frequency: str | None
-    classification: str | None
-    cause_category: str | None
-    cause: str | None
-    immediate_actions: str | None
-    action_description: str | None
-    validation_description: str | None
+    external_case_id: str | None = None
+    case_type: str | None = None
+    location: str | None = None
+    responsible_entity: str | None = None
+    occurred_at: datetime | None = None
+    title: str | None = None
+    description: str | None = None
+    activity: str | None = None
+    severity_level: str | None = None
+    recurrence_frequency: str | None = None
+    classification: str | None = None
+    cause_category: str | None = None
+    cause: str | None = None
+    immediate_actions: str | None = None
+    action_description: str | None = None
+    validation_description: str | None = None
 
 class ProcessedIncidentResponse(BaseModel):
     id: UUID

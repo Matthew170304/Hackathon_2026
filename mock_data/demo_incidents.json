@@ -1,0 +1,28 @@
+[
+  {
+    "external_case_id": "demo-slip-001",
+    "location": "Denmark - Nordborg - Nordborgvej 81",
+    "title": "Wet floor near production entry",
+    "description": "Operator slipped on wet floor near the machine entry.",
+    "activity": "Walking",
+    "recurrence_frequency": "14 days - 6 months"
+  },
+  {
+    "external_case_id": "demo-machine-001",
+    "location": "Denmark - Nordborg - Nordborgvej 81",
+    "title": "Unguarded moving machine part",
+    "description": "Worker was exposed to an unguarded moving machine part during setup.",
+    "activity": "Machine setup",
+    "cause_category": "Procedures",
+    "recurrence_frequency": "0 - 14 days"
+  },
+  {
+    "external_case_id": "demo-forklift-001",
+    "location": "Poland - Grodzisk - Main site",
+    "title": "Forklift crossed pedestrian walkway",
+    "description": "Forklift traffic crossed a pedestrian route without clear separation.",
+    "activity": "Internal logistics",
+    "severity_level": "High",
+    "recurrence_frequency": "14 days - 6 months"
+  }
+]
