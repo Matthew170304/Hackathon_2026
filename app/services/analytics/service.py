@@ -15,8 +15,50 @@ from app.schemas.analytics_schemas import (
     RoadmapAction,
     SiteRiskRoadmap,
     StrategicAction,
+    StrategicDataQuality,
+    StrategicPeriod,
+    StrategicPriority,
     StrategicRecommendation,
 )
+
+
+OBSERVABILITY_BY_HAZARD = {
+    "Physical Hazards": "high",
+    "Housekeeping": "high",
+    "Vehicle & Traffic Hazards": "medium",
+    "Mechanical / Equipment Hazards": "medium",
+    "Electrical Hazards": "low",
+    "Chemical Hazards": "medium",
+    "Fire & Explosion Hazards": "low",
+    "Process Safety / Operational Hazards": "low",
+    "Ergonomic Hazards": "low",
+    "Environmental Hazards": "low",
+    "Unknown": "low",
+}
+
+OBSERVABILITY_MULTIPLIER = {
+    "high": 0.85,
+    "medium": 1.0,
+    "low": 1.25,
+}
+
+SEVERITY_WEIGHT = {
+    "Very low": 1,
+    "Low": 5,
+    "Medium": 10,
+    "High": 25,
+    "Very high": 75,
+    "Unknown": 0,
+}
+
+RECURRENCE_WEIGHT = {
+    "Less often": 1,
+    "1 year - 5 years": 2,
+    "6 months - 1 year": 3,
+    "14 days - 6 months": 4,
+    "0 - 14 days": 5,
+    "Unknown": 0,
+}
 
 
 class AnalyticsService:
@@ -142,11 +184,18 @@ class AnalyticsService:
             date_to=date_to,
             location=location,
         )
+        evidence = self._build_strategic_evidence(
+            date_from=date_from,
+            date_to=date_to,
+            location=location,
+            records=records,
+        )
         fallback = self._build_fallback_strategic_recommendation(
             date_from=date_from,
             date_to=date_to,
             location=location,
             records=records,
+            evidence=evidence,
         )
 
         ai_result = await self._try_generate_ai_strategic_recommendation(
@@ -154,6 +203,7 @@ class AnalyticsService:
             date_to=date_to,
             location=location,
             records=records,
+            evidence=evidence,
         )
         return ai_result or fallback
 
@@ -190,19 +240,23 @@ class AnalyticsService:
         date_to: date,
         location: str | None,
         records,
+        evidence: dict[str, Any],
     ) -> StrategicRecommendation:
         hazard_counts = self._count_by(records, "hazard_category")
-        cause_counts = self._count_by(records, "cause_category")
-        top_hazards = sorted(hazard_counts.items(), key=lambda item: item[1], reverse=True)[:5]
+        priorities = evidence["strategic_priorities"]
 
         observed_problems = [
             ObservedProblem(
-                problem=f"{hazard} linked to {self._top_related_cause(records, hazard)}",
-                evidence=f"{count} observed incident(s) in the selected period.",
-                incident_count=count,
-                risk_signal=self._risk_signal(records, hazard),
+                problem=priority.problem,
+                evidence=(
+                    f"{priority.observed_frequency} observed incident(s), "
+                    f"max risk {priority.max_risk_score}, evidence cases: "
+                    f"{', '.join(priority.evidence_case_ids[:5]) or 'none'}."
+                ),
+                incident_count=priority.observed_frequency,
+                risk_signal=priority.severity_signal,
             )
-            for hazard, count in top_hazards
+            for priority in priorities[:5]
         ]
 
         return StrategicRecommendation(
@@ -211,10 +265,14 @@ class AnalyticsService:
             location_filter=location,
             incident_count=len(records),
             ai_generated=False,
+            methodology=evidence["methodology"],
+            period=evidence["period"],
+            data_quality=evidence["data_quality"],
+            strategic_priorities=priorities,
             executive_summary=(
                 f"{len(records)} processed incident(s) were analyzed. "
-                "The strongest observed patterns should be treated as a reporting signal, "
-                "not a complete map of all safety risk."
+                "Priorities were ranked with observed frequency, severity potential, recurrence, "
+                "observability bias, confidence, and evidence traceability."
             ),
             observed_problem_summary=self._format_counts("Observed hazard pattern", hazard_counts),
             observability_bias_note=(
@@ -235,7 +293,11 @@ class AnalyticsService:
                     how_to_check="Compare reporting rate per headcount/shift and ask teams what stops them from reporting weak signals.",
                 ),
             ],
-            recommended_actions=self._strategic_actions(records, hazard_counts, cause_counts),
+            recommended_actions=[
+                action
+                for priority in priorities[:3]
+                for action in priority.recommended_actions[:1]
+            ] or self._no_data_actions(),
         )
 
     async def _try_generate_ai_strategic_recommendation(
@@ -244,6 +306,7 @@ class AnalyticsService:
         date_to: date,
         location: str | None,
         records,
+        evidence: dict[str, Any],
     ) -> StrategicRecommendation | None:
         settings = get_settings()
         if settings.ai_provider.lower() != "openai" or not settings.openai_api_key:
@@ -254,17 +317,19 @@ class AnalyticsService:
         except ImportError:
             return None
 
-        context = self._build_ai_context(records)
+        context = json.dumps(self._evidence_for_ai(evidence), ensure_ascii=False, indent=2)
         system_prompt = (
             "You are a senior EHS prevention strategist. Analyze observation-based safety reports. "
             "Do not assume low report count means low risk. Explicitly account for observability bias, "
             "underreporting, low-frequency high-severity hazards, reporting culture, and weak signals. "
+            "Use only the structured evidence package. Do not invent counts or evidence case IDs. "
+            "Separate observed patterns from hidden-risk hypotheses. "
             "Return concise JSON only."
         )
         user_prompt = (
             f"Period: {date_from.isoformat()} to {date_to.isoformat()}\n"
             f"Location filter: {location or 'all'}\n"
-            f"Processed incidents:\n{context}"
+            f"Structured evidence package:\n{context}"
         )
 
         try:
@@ -293,36 +358,308 @@ class AnalyticsService:
                 location_filter=location,
                 incident_count=len(records),
                 ai_generated=True,
+                methodology=evidence["methodology"],
+                period=evidence["period"],
+                data_quality=evidence["data_quality"],
+                strategic_priorities=evidence["strategic_priorities"],
                 **data,
             )
         except Exception:
             return None
 
-    @staticmethod
-    def _build_ai_context(records) -> str:
-        lines = []
-        for item in records[:200]:
+    def _build_strategic_evidence(
+        self,
+        date_from: date,
+        date_to: date,
+        location: str | None,
+        records,
+    ) -> dict[str, Any]:
+        period = StrategicPeriod(
+            start=date_from.isoformat(),
+            end=date_to.isoformat(),
+            location_filter=location,
+        )
+        data_quality = self._data_quality(records)
+        priorities = self._strategic_priorities(records)
+        return {
+            "methodology": (
+                "Weighted evidence model: clustered incidents by site/activity/hazard/cause, "
+                "then ranked clusters using observed frequency, average and maximum risk, critical count, "
+                "recurrence, severity, observability bias, confidence, and traceable evidence case IDs. "
+                "Lower observability increases hidden-risk weight because observation-based reports undercount "
+                "weak signals and rare high-severity hazards."
+            ),
+            "period": period,
+            "data_quality": data_quality,
+            "strategic_priorities": priorities,
+        }
+
+    def _data_quality(self, records) -> StrategicDataQuality:
+        count = len(records)
+        if count == 0:
+            return StrategicDataQuality(
+                incident_count=0,
+                missing_severity_rate=0.0,
+                missing_recurrence_rate=0.0,
+                unknown_hazard_rate=0.0,
+                unknown_cause_rate=0.0,
+                needs_review_rate=0.0,
+                average_confidence=0.0,
+                reporting_bias_assessment="High uncertainty: no matching processed reports.",
+                data_limitations=[
+                    "No records matched the selected period/location.",
+                    "No conclusion about true risk can be drawn from absence of reports.",
+                ],
+            )
+
+        missing_severity = sum(1 for item in records if item.severity_level == "Unknown")
+        missing_recurrence = sum(1 for item in records if item.recurrence_frequency == "Unknown")
+        unknown_hazard = sum(1 for item in records if item.hazard_category == "Unknown")
+        unknown_cause = sum(1 for item in records if item.cause_category == "Unknown")
+        needs_review = sum(1 for item in records if item.needs_human_review)
+        confidences = [
+            confidence
+            for item in records
+            for confidence in (
+                item.hazard_confidence,
+                item.cause_confidence,
+                item.severity_confidence,
+                item.recurrence_confidence,
+            )
+        ]
+        average_confidence = sum(confidences) / len(confidences)
+        limitations = [
+            "Observation-based data overrepresents visible hazards and underrepresents weak signals.",
+            "No exposure denominators are available, so counts are not normalized by headcount, hours, or asset count.",
+        ]
+        if missing_severity:
+            limitations.append("Some severity values are unknown or inferred.")
+        if missing_recurrence:
+            limitations.append("Some recurrence values are unknown or inferred.")
+        if needs_review / count > 0.25:
+            limitations.append("High share of records need human review, reducing certainty.")
+
+        return StrategicDataQuality(
+            incident_count=count,
+            missing_severity_rate=round(missing_severity / count, 3),
+            missing_recurrence_rate=round(missing_recurrence / count, 3),
+            unknown_hazard_rate=round(unknown_hazard / count, 3),
+            unknown_cause_rate=round(unknown_cause / count, 3),
+            needs_review_rate=round(needs_review / count, 3),
+            average_confidence=round(average_confidence, 3),
+            reporting_bias_assessment=self._reporting_bias_assessment(count, needs_review, average_confidence),
+            data_limitations=limitations,
+        )
+
+    def _strategic_priorities(self, records) -> list[StrategicPriority]:
+        grouped: dict[tuple, list] = defaultdict(list)
+        for item in records:
             incident = item.incident
-            lines.append(
-                json.dumps(
-                    {
-                        "date": incident.occurred_at.date().isoformat() if incident and incident.occurred_at else None,
-                        "location": incident.location if incident else None,
-                        "site": incident.site if incident else None,
-                        "activity": incident.activity if incident else None,
-                        "title": incident.title if incident else None,
-                        "description": incident.description if incident else None,
-                        "hazard": item.hazard_category,
-                        "cause": item.cause_category,
-                        "severity": item.severity_level,
-                        "recurrence": item.recurrence_frequency,
-                        "risk_score": item.risk_score,
-                        "needs_review": item.needs_human_review,
-                    },
-                    ensure_ascii=False,
+            key = (
+                incident.site if incident else None,
+                incident.activity if incident else None,
+                item.hazard_category,
+                item.cause_category,
+            )
+            grouped[key].append(item)
+
+        priorities = []
+        for key, items in grouped.items():
+            site, activity, hazard, cause = key
+            scores = [item.risk_score or 0 for item in items]
+            average_risk = sum(scores) / len(scores) if scores else 0
+            max_risk = max(scores) if scores else 0
+            critical_count = sum(1 for score in scores if score > 100)
+            observability = OBSERVABILITY_BY_HAZARD.get(hazard, "low")
+            frequency_score = min(len(items) * 8, 40)
+            severity_score = max(SEVERITY_WEIGHT.get(item.severity_level, 0) for item in items)
+            recurrence_score = max(RECURRENCE_WEIGHT.get(item.recurrence_frequency, 0) for item in items) * 5
+            hidden_multiplier = OBSERVABILITY_MULTIPLIER[observability]
+            confidence = self._cluster_confidence(items)
+            priority_score = (
+                frequency_score
+                + (average_risk * 0.35)
+                + (max_risk * 0.25)
+                + (critical_count * 15)
+                + severity_score
+                + recurrence_score
+            ) * hidden_multiplier * (0.75 + confidence * 0.25)
+            evidence_case_ids = [
+                item.incident.external_case_id or item.incident_id
+                for item in items
+                if item.incident is not None
+            ][:8]
+            priorities.append(
+                StrategicPriority(
+                    rank=0,
+                    problem=self._cluster_problem(site, activity, hazard, cause),
+                    cluster_key=" | ".join(str(value or "Unknown") for value in key),
+                    priority_score=round(priority_score, 2),
+                    confidence=confidence,
+                    observed_frequency=len(items),
+                    average_risk_score=round(average_risk, 2),
+                    max_risk_score=max_risk,
+                    critical_count=critical_count,
+                    severity_signal=self._severity_signal(max_risk),
+                    recurrence_signal=self._recurrence_signal(items),
+                    observability=observability,
+                    underreporting_likelihood=self._underreporting_likelihood(observability, hazard, confidence),
+                    why_it_matters=self._why_cluster_matters(hazard, cause, observability, max_risk, len(items)),
+                    evidence_case_ids=evidence_case_ids,
+                    recommended_actions=[
+                        self._priority_action(hazard, cause, max_risk, observability)
+                    ],
                 )
             )
-        return "\n".join(lines) or "No records matched."
+
+        priorities.sort(key=lambda item: item.priority_score, reverse=True)
+        for index, priority in enumerate(priorities, start=1):
+            priority.rank = index
+        return priorities[:12]
+
+    @staticmethod
+    def _evidence_for_ai(evidence: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "methodology": evidence["methodology"],
+            "period": evidence["period"].model_dump(),
+            "data_quality": evidence["data_quality"].model_dump(),
+            "strategic_priorities": [
+                priority.model_dump()
+                for priority in evidence["strategic_priorities"][:8]
+            ],
+        }
+
+    @staticmethod
+    def _reporting_bias_assessment(
+        count: int,
+        needs_review: int,
+        average_confidence: float,
+    ) -> str:
+        if count < 10:
+            return "High uncertainty: low sample size may hide risk."
+        if needs_review / count > 0.35 or average_confidence < 0.65:
+            return "Moderate to high uncertainty: review share or confidence suggests weak data quality."
+        return "Moderate uncertainty: observation-based data still needs exposure and culture checks."
+
+    @staticmethod
+    def _cluster_confidence(items) -> float:
+        values = []
+        for item in items:
+            values.extend(
+                [
+                    item.hazard_confidence,
+                    item.cause_confidence,
+                    item.severity_confidence,
+                    item.recurrence_confidence,
+                ]
+            )
+        if not values:
+            return 0.0
+        return round(sum(values) / len(values), 3)
+
+    @staticmethod
+    def _cluster_problem(
+        site: str | None,
+        activity: str | None,
+        hazard: str,
+        cause: str,
+    ) -> str:
+        context = []
+        if site:
+            context.append(site)
+        if activity:
+            context.append(activity)
+        context_text = " / ".join(context) if context else "selected scope"
+        return f"{hazard} linked to {cause} in {context_text}"
+
+    @staticmethod
+    def _severity_signal(max_risk: int) -> str:
+        if max_risk > 100:
+            return "Critical potential present"
+        if max_risk > 40:
+            return "High potential present"
+        if max_risk > 10:
+            return "Medium potential present"
+        return "Lower scored potential, still monitor for recurrence"
+
+    @staticmethod
+    def _recurrence_signal(items) -> str:
+        recurrence_values = [item.recurrence_frequency for item in items]
+        if "0 - 14 days" in recurrence_values:
+            return "Frequent recurrence signal"
+        if "14 days - 6 months" in recurrence_values:
+            return "Recurring within months"
+        if "Unknown" in recurrence_values:
+            return "Recurrence uncertain"
+        return "Lower observed recurrence"
+
+    @staticmethod
+    def _underreporting_likelihood(
+        observability: str,
+        hazard: str,
+        confidence: float,
+    ) -> str:
+        if observability == "low" or confidence < 0.6:
+            return "High"
+        if "Mechanical" in hazard or "Vehicle" in hazard or observability == "medium":
+            return "Medium"
+        return "Low"
+
+    @staticmethod
+    def _why_cluster_matters(
+        hazard: str,
+        cause: str,
+        observability: str,
+        max_risk: int,
+        count: int,
+    ) -> str:
+        reasons = [
+            f"{count} observed report(s)",
+            f"maximum risk score {max_risk}",
+            f"{observability} observability",
+            f"cause pattern: {cause}",
+        ]
+        if observability == "low":
+            reasons.append("low-observability hazards can be undercounted in employee reports")
+        if max_risk > 100:
+            reasons.append("critical potential requires rapid verification")
+        return f"{hazard}: " + "; ".join(reasons) + "."
+
+    def _priority_action(
+        self,
+        hazard: str,
+        cause: str,
+        max_risk: int,
+        observability: str,
+    ) -> StrategicAction:
+        priority = "Critical" if max_risk > 100 else "High" if max_risk > 40 else "Medium"
+        timeframe = "7 days" if priority == "Critical" else "30 days" if priority == "High" else "90 days"
+        validation = (
+            " Include targeted verification because this is a low-observability hazard."
+            if observability == "low"
+            else ""
+        )
+        return StrategicAction(
+            priority=priority,
+            owner_type=self._owner(hazard),
+            timeframe=timeframe,
+            action=f"Run a focused control review for {hazard} linked to {cause}.{validation}",
+            reason="Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+            expected_impact="Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure.",
+        )
+
+    @staticmethod
+    def _no_data_actions() -> list[StrategicAction]:
+        return [
+            StrategicAction(
+                priority="Medium",
+                owner_type="EHS",
+                timeframe="30 days",
+                action="Run targeted observation campaigns before concluding the period has low risk.",
+                reason="No processed reports matched the filter, which may indicate low reporting rather than low risk.",
+                expected_impact="Improves visibility of weak signals and reporting barriers.",
+            )
+        ]
 
     @staticmethod
     def _count_by(records, attribute: str) -> dict[str, int]:

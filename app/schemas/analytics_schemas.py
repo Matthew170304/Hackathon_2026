@@ -68,12 +68,53 @@ class StrategicAction(BaseModel):
     expected_impact: str
 
 
+class StrategicPeriod(BaseModel):
+    start: str
+    end: str
+    location_filter: str | None
+
+
+class StrategicDataQuality(BaseModel):
+    incident_count: int
+    missing_severity_rate: float
+    missing_recurrence_rate: float
+    unknown_hazard_rate: float
+    unknown_cause_rate: float
+    needs_review_rate: float
+    average_confidence: float
+    reporting_bias_assessment: str
+    data_limitations: list[str]
+
+
+class StrategicPriority(BaseModel):
+    rank: int
+    problem: str
+    cluster_key: str
+    priority_score: float
+    confidence: float
+    observed_frequency: int
+    average_risk_score: float
+    max_risk_score: int
+    critical_count: int
+    severity_signal: str
+    recurrence_signal: str
+    observability: str
+    underreporting_likelihood: str
+    why_it_matters: str
+    evidence_case_ids: list[str]
+    recommended_actions: list[StrategicAction]
+
+
 class StrategicRecommendation(BaseModel):
     period_start: str
     period_end: str
     location_filter: str | None
     incident_count: int
     ai_generated: bool
+    methodology: str
+    period: StrategicPeriod
+    data_quality: StrategicDataQuality
+    strategic_priorities: list[StrategicPriority]
     executive_summary: str
     observed_problem_summary: str
     observability_bias_note: str
