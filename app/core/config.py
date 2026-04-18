@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./safety_intelligence.db"
     ai_provider: str = "mock"
     translator_provider: str = "mock"
+    deepl_api_key: str | None = None
     openai_api_key: str | None = None
     hazard_ai_model: str = "gpt-4o-mini"
 
@@ -33,3 +34,5 @@ def get_settings() -> Settings:
     """
     return Settings()
 
+
+settings = get_settings()
