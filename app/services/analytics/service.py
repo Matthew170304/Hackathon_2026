@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.domain.enums import CauseCategory, HazardCategory, RecurrenceFrequency, SeverityLevel
 from app.repositories.incident_repository import IncidentRepository
 from app.schemas.analytics_schemas import (
     HiddenRiskHypothesis,
@@ -20,20 +21,28 @@ from app.schemas.analytics_schemas import (
     StrategicPriority,
     StrategicRecommendation,
 )
+from app.services.risk_scoring.service import (
+    HIGH_RISK_MAX_SCORE,
+    LOW_RISK_MAX_SCORE,
+    MEDIUM_RISK_MAX_SCORE,
+    RISK_LABEL_CRITICAL,
+    RISK_LABEL_HIGH,
+    RISK_LABEL_MEDIUM,
+)
 
 
 OBSERVABILITY_BY_HAZARD = {
-    "Physical Hazards": "high",
-    "Housekeeping": "high",
-    "Vehicle & Traffic Hazards": "medium",
-    "Mechanical / Equipment Hazards": "medium",
-    "Electrical Hazards": "low",
-    "Chemical Hazards": "medium",
-    "Fire & Explosion Hazards": "low",
-    "Process Safety / Operational Hazards": "low",
-    "Ergonomic Hazards": "low",
-    "Environmental Hazards": "low",
-    "Unknown": "low",
+    HazardCategory.PHYSICAL.value: "high",
+    CauseCategory.HOUSEKEEPING.value: "high",
+    HazardCategory.VEHICLE_TRAFFIC.value: "medium",
+    HazardCategory.MECHANICAL_EQUIPMENT.value: "medium",
+    HazardCategory.ELECTRICAL.value: "low",
+    HazardCategory.CHEMICAL.value: "medium",
+    HazardCategory.FIRE_EXPLOSION.value: "low",
+    HazardCategory.PROCESS_SAFETY_OPERATIONAL.value: "low",
+    HazardCategory.ERGONOMIC.value: "low",
+    HazardCategory.ENVIRONMENTAL.value: "low",
+    HazardCategory.UNKNOWN.value: "low",
 }
 
 OBSERVABILITY_MULTIPLIER = {
@@ -45,22 +54,51 @@ OBSERVABILITY_MULTIPLIER = {
 # These scores are intentionally simple. They are not a prediction model.
 # They make the ranking auditable for hackathon/demo use.
 SEVERITY_WEIGHT = {
-    "Very low": 1,
-    "Low": 5,
-    "Medium": 10,
-    "High": 25,
-    "Very high": 75,
-    "Unknown": 0,
+    SeverityLevel.VERY_LOW.value: 1,
+    SeverityLevel.LOW.value: 5,
+    SeverityLevel.MEDIUM.value: 10,
+    SeverityLevel.HIGH.value: 25,
+    SeverityLevel.VERY_HIGH.value: 75,
+    SeverityLevel.UNKNOWN.value: 0,
 }
 
 RECURRENCE_WEIGHT = {
-    "Less often": 1,
-    "1 year - 5 years": 2,
-    "6 months - 1 year": 3,
-    "14 days - 6 months": 4,
-    "0 - 14 days": 5,
-    "Unknown": 0,
+    RecurrenceFrequency.LESS_OFTEN.value: 1,
+    RecurrenceFrequency.ONE_TO_FIVE_YEARS.value: 2,
+    RecurrenceFrequency.SIX_MONTHS_TO_ONE_YEAR.value: 3,
+    RecurrenceFrequency.FOURTEEN_DAYS_TO_SIX_MONTHS.value: 4,
+    RecurrenceFrequency.ZERO_TO_FOURTEEN_DAYS.value: 5,
+    RecurrenceFrequency.UNKNOWN.value: 0,
 }
+
+ROADMAP_ACTION_LIMIT = 10
+STRATEGIC_PRIORITY_LIMIT = 12
+AI_STRATEGIC_PRIORITY_LIMIT = 8
+EVIDENCE_CASE_ID_LIMIT = 8
+OBSERVED_PROBLEM_LIMIT = 5
+RECOMMENDED_ACTION_LIMIT = 3
+
+TIMEFRAME_ONE_WEEK = "7 days"
+TIMEFRAME_ONE_MONTH = "30 days"
+TIMEFRAME_THREE_MONTHS = "90 days"
+
+OPENAI_PROVIDER = "openai"
+AI_STRATEGIC_TEMPERATURE = 0.1
+
+HIGH_NEEDS_REVIEW_RATE = 0.25
+LOW_SAMPLE_SIZE_COUNT = 10
+WEAK_DATA_NEEDS_REVIEW_RATE = 0.35
+WEAK_DATA_CONFIDENCE_THRESHOLD = 0.65
+UNDERREPORTING_CONFIDENCE_THRESHOLD = 0.6
+
+FREQUENCY_POINTS_PER_INCIDENT = 8
+MAX_FREQUENCY_POINTS = 40
+AVERAGE_RISK_WEIGHT = 0.35
+MAXIMUM_RISK_WEIGHT = 0.25
+CRITICAL_CASE_POINTS = 15
+RECURRENCE_WEIGHT_MULTIPLIER = 5
+CONFIDENCE_BASE_MULTIPLIER = 0.75
+CONFIDENCE_WEIGHT_MULTIPLIER = 0.25
 
 
 class AnalyticsService:
@@ -136,7 +174,11 @@ class AnalyticsService:
                     incident_count=len(items),
                     average_risk_score=round(sum(scores) / len(scores), 2),
                     max_risk_score=max(scores),
-                    critical_count=sum(1 for item in items if (item.risk_score or 0) > 100),
+                    critical_count=sum(
+                        1
+                        for item in items
+                        if (item.risk_score or 0) > HIGH_RISK_MAX_SCORE
+                    ),
                 )
             )
 
@@ -161,13 +203,13 @@ class AnalyticsService:
             clusters = [cluster for cluster in clusters if cluster.site == site]
 
         actions = []
-        for cluster in clusters[:10]:
-            if cluster.max_risk_score > 100:
-                timeframe = "7 days"
-            elif cluster.max_risk_score > 40:
-                timeframe = "30 days"
+        for cluster in clusters[:ROADMAP_ACTION_LIMIT]:
+            if cluster.max_risk_score > HIGH_RISK_MAX_SCORE:
+                timeframe = TIMEFRAME_ONE_WEEK
+            elif cluster.max_risk_score > MEDIUM_RISK_MAX_SCORE:
+                timeframe = TIMEFRAME_ONE_MONTH
             else:
-                timeframe = "90 days"
+                timeframe = TIMEFRAME_THREE_MONTHS
 
             actions.append(
                 RoadmapAction(
@@ -263,12 +305,12 @@ class AnalyticsService:
                 evidence=(
                     f"{priority.observed_frequency} observed incident(s), "
                     f"max risk {priority.max_risk_score}, evidence cases: "
-                    f"{', '.join(priority.evidence_case_ids[:5]) or 'none'}."
+                    f"{', '.join(priority.evidence_case_ids[:OBSERVED_PROBLEM_LIMIT]) or 'none'}."
                 ),
                 incident_count=priority.observed_frequency,
                 risk_signal=priority.severity_signal,
             )
-            for priority in priorities[:5]
+            for priority in priorities[:OBSERVED_PROBLEM_LIMIT]
         ]
 
         return StrategicRecommendation(
@@ -307,7 +349,7 @@ class AnalyticsService:
             ],
             recommended_actions=[
                 action
-                for priority in priorities[:3]
+                for priority in priorities[:RECOMMENDED_ACTION_LIMIT]
                 for action in priority.recommended_actions[:1]
             ] or self._no_data_actions(),
         )
@@ -321,7 +363,7 @@ class AnalyticsService:
         evidence: dict[str, Any],
     ) -> StrategicRecommendation | None:
         settings = get_settings()
-        if settings.ai_provider.lower() != "openai" or not settings.openai_api_key:
+        if settings.ai_provider.lower() != OPENAI_PROVIDER or not settings.openai_api_key:
             return None
 
         try:
@@ -348,7 +390,7 @@ class AnalyticsService:
             client = AsyncOpenAI(api_key=settings.openai_api_key)
             response = await client.responses.create(
                 model=settings.hazard_ai_model,
-                temperature=0.1,
+                temperature=AI_STRATEGIC_TEMPERATURE,
                 input=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
@@ -424,10 +466,18 @@ class AnalyticsService:
                 ],
             )
 
-        missing_severity = sum(1 for item in records if item.severity_level == "Unknown")
-        missing_recurrence = sum(1 for item in records if item.recurrence_frequency == "Unknown")
-        unknown_hazard = sum(1 for item in records if item.hazard_category == "Unknown")
-        unknown_cause = sum(1 for item in records if item.cause_category == "Unknown")
+        missing_severity = sum(
+            1 for item in records if item.severity_level == SeverityLevel.UNKNOWN.value
+        )
+        missing_recurrence = sum(
+            1 for item in records if item.recurrence_frequency == RecurrenceFrequency.UNKNOWN.value
+        )
+        unknown_hazard = sum(
+            1 for item in records if item.hazard_category == HazardCategory.UNKNOWN.value
+        )
+        unknown_cause = sum(
+            1 for item in records if item.cause_category == CauseCategory.UNKNOWN.value
+        )
         needs_review = sum(1 for item in records if item.needs_human_review)
         confidences = [
             confidence
@@ -448,7 +498,7 @@ class AnalyticsService:
             limitations.append("Some severity values are unknown or inferred.")
         if missing_recurrence:
             limitations.append("Some recurrence values are unknown or inferred.")
-        if needs_review / count > 0.25:
+        if needs_review / count > HIGH_NEEDS_REVIEW_RATE:
             limitations.append("High share of records need human review, reducing certainty.")
 
         return StrategicDataQuality(
@@ -490,7 +540,7 @@ class AnalyticsService:
                 average_risk = 0
                 max_risk = 0
 
-            critical_count = sum(1 for score in scores if score > 100)
+            critical_count = sum(1 for score in scores if score > HIGH_RISK_MAX_SCORE)
 
             # Observation bias: low-observability hazards get a higher weight.
             # Example: exposed wiring is easier to miss than a wet floor.
@@ -509,12 +559,12 @@ class AnalyticsService:
                 item.incident.external_case_id or item.incident_id
                 for item in items
                 if item.incident is not None
-            ][:8]
+            ][:EVIDENCE_CASE_ID_LIMIT]
             priorities.append(
                 StrategicPriority(
                     rank=0,
                     problem=self._cluster_problem(site, activity, hazard, cause),
-                    cluster_key=" | ".join(str(value or "Unknown") for value in key),
+                    cluster_key=" | ".join(str(value or HazardCategory.UNKNOWN.value) for value in key),
                     priority_score=round(priority_score, 2),
                     confidence=confidence,
                     observed_frequency=len(items),
@@ -536,7 +586,7 @@ class AnalyticsService:
         priorities.sort(key=lambda item: item.priority_score, reverse=True)
         for index, priority in enumerate(priorities, start=1):
             priority.rank = index
-        return priorities[:12]
+        return priorities[:STRATEGIC_PRIORITY_LIMIT]
 
     @staticmethod
     def _calculate_priority_score(
@@ -548,15 +598,15 @@ class AnalyticsService:
         confidence: float,
         items,
     ) -> float:
-        frequency_points = min(item_count * 8, 40)
-        average_risk_points = average_risk * 0.35
-        maximum_risk_points = max_risk * 0.25
-        critical_case_points = critical_count * 15
+        frequency_points = min(item_count * FREQUENCY_POINTS_PER_INCIDENT, MAX_FREQUENCY_POINTS)
+        average_risk_points = average_risk * AVERAGE_RISK_WEIGHT
+        maximum_risk_points = max_risk * MAXIMUM_RISK_WEIGHT
+        critical_case_points = critical_count * CRITICAL_CASE_POINTS
         severity_points = max(SEVERITY_WEIGHT.get(item.severity_level, 0) for item in items)
         recurrence_points = max(
             RECURRENCE_WEIGHT.get(item.recurrence_frequency, 0)
             for item in items
-        ) * 5
+        ) * RECURRENCE_WEIGHT_MULTIPLIER
 
         base_score = (
             frequency_points
@@ -568,7 +618,7 @@ class AnalyticsService:
         )
 
         hidden_risk_multiplier = OBSERVABILITY_MULTIPLIER[observability]
-        confidence_multiplier = 0.75 + confidence * 0.25
+        confidence_multiplier = CONFIDENCE_BASE_MULTIPLIER + confidence * CONFIDENCE_WEIGHT_MULTIPLIER
 
         return round(base_score * hidden_risk_multiplier * confidence_multiplier, 2)
 
@@ -580,7 +630,7 @@ class AnalyticsService:
             "data_quality": evidence["data_quality"].model_dump(),
             "strategic_priorities": [
                 priority.model_dump()
-                for priority in evidence["strategic_priorities"][:8]
+                for priority in evidence["strategic_priorities"][:AI_STRATEGIC_PRIORITY_LIMIT]
             ],
         }
 
@@ -590,9 +640,12 @@ class AnalyticsService:
         needs_review: int,
         average_confidence: float,
     ) -> str:
-        if count < 10:
+        if count < LOW_SAMPLE_SIZE_COUNT:
             return "High uncertainty: low sample size may hide risk."
-        if needs_review / count > 0.35 or average_confidence < 0.65:
+        if (
+            needs_review / count > WEAK_DATA_NEEDS_REVIEW_RATE
+            or average_confidence < WEAK_DATA_CONFIDENCE_THRESHOLD
+        ):
             return "Moderate to high uncertainty: review share or confidence suggests weak data quality."
         return "Moderate uncertainty: observation-based data still needs exposure and culture checks."
 
@@ -629,22 +682,22 @@ class AnalyticsService:
 
     @staticmethod
     def _severity_signal(max_risk: int) -> str:
-        if max_risk > 100:
+        if max_risk > HIGH_RISK_MAX_SCORE:
             return "Critical potential present"
-        if max_risk > 40:
+        if max_risk > MEDIUM_RISK_MAX_SCORE:
             return "High potential present"
-        if max_risk > 10:
+        if max_risk > LOW_RISK_MAX_SCORE:
             return "Medium potential present"
         return "Lower scored potential, still monitor for recurrence"
 
     @staticmethod
     def _recurrence_signal(items) -> str:
         recurrence_values = [item.recurrence_frequency for item in items]
-        if "0 - 14 days" in recurrence_values:
+        if RecurrenceFrequency.ZERO_TO_FOURTEEN_DAYS.value in recurrence_values:
             return "Frequent recurrence signal"
-        if "14 days - 6 months" in recurrence_values:
+        if RecurrenceFrequency.FOURTEEN_DAYS_TO_SIX_MONTHS.value in recurrence_values:
             return "Recurring within months"
-        if "Unknown" in recurrence_values:
+        if RecurrenceFrequency.UNKNOWN.value in recurrence_values:
             return "Recurrence uncertain"
         return "Lower observed recurrence"
 
@@ -654,7 +707,7 @@ class AnalyticsService:
         hazard: str,
         confidence: float,
     ) -> str:
-        if observability == "low" or confidence < 0.6:
+        if observability == "low" or confidence < UNDERREPORTING_CONFIDENCE_THRESHOLD:
             return "High"
         if "Mechanical" in hazard or "Vehicle" in hazard or observability == "medium":
             return "Medium"
@@ -676,7 +729,7 @@ class AnalyticsService:
         ]
         if observability == "low":
             reasons.append("low-observability hazards can be undercounted in employee reports")
-        if max_risk > 100:
+        if max_risk > HIGH_RISK_MAX_SCORE:
             reasons.append("critical potential requires rapid verification")
         return f"{hazard}: " + "; ".join(reasons) + "."
 
@@ -687,15 +740,15 @@ class AnalyticsService:
         max_risk: int,
         observability: str,
     ) -> StrategicAction:
-        if max_risk > 100:
-            priority = "Critical"
-            timeframe = "7 days"
-        elif max_risk > 40:
-            priority = "High"
-            timeframe = "30 days"
+        if max_risk > HIGH_RISK_MAX_SCORE:
+            priority = RISK_LABEL_CRITICAL
+            timeframe = TIMEFRAME_ONE_WEEK
+        elif max_risk > MEDIUM_RISK_MAX_SCORE:
+            priority = RISK_LABEL_HIGH
+            timeframe = TIMEFRAME_ONE_MONTH
         else:
-            priority = "Medium"
-            timeframe = "90 days"
+            priority = RISK_LABEL_MEDIUM
+            timeframe = TIMEFRAME_THREE_MONTHS
 
         validation = ""
         if observability == "low":
@@ -714,9 +767,9 @@ class AnalyticsService:
     def _no_data_actions() -> list[StrategicAction]:
         return [
             StrategicAction(
-                priority="Medium",
+                priority=RISK_LABEL_MEDIUM,
                 owner_type="EHS",
-                timeframe="30 days",
+                timeframe=TIMEFRAME_ONE_MONTH,
                 action="Run targeted observation campaigns before concluding the period has low risk.",
                 reason="No processed reports matched the filter, which may indicate low reporting rather than low risk.",
                 expected_impact="Improves visibility of weak signals and reporting barriers.",

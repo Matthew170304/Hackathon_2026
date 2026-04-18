@@ -18,6 +18,8 @@ SUPPORTED_LANGUAGE_CODES = {
     "pt",
 }
 
+MIN_TEXT_LENGTH_FOR_DETECTION = 12
+
 _CHINESE_PATTERN = re.compile(r"[\u4e00-\u9fff]")
 _CYRILLIC_PATTERN = re.compile(r"[\u0400-\u04ff]")
 _DANISH_PATTERN = re.compile(r"[æøå]|\b(ikke|hånd|arbejde|maskine|adgang)\b", re.IGNORECASE)
@@ -33,7 +35,7 @@ _ENGLISH_PATTERN = re.compile(r"\b(the|and|with|incident|worker|machine|safety)\
 
 class LanguageService:
     def detect_language(self, text: str) -> Optional[str]:
-        if not text or len(text.strip()) < 12:
+        if not text or len(text.strip()) < MIN_TEXT_LENGTH_FOR_DETECTION:
             return None
 
         normalized_text = text.strip()

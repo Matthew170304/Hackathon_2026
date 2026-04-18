@@ -15,6 +15,12 @@ logger = logging.getLogger(__name__)
 SOURCE_VALUE_CONFIDENCE = 0.95
 NO_MATCH_CONFIDENCE = 0.2
 AI_FALLBACK_THRESHOLD = 0.65
+ONE_KEYWORD_CONFIDENCE = 0.5
+TWO_KEYWORDS_CONFIDENCE = 0.7
+THREE_OR_MORE_KEYWORDS_CONFIDENCE = 0.85
+MIN_VALID_CONFIDENCE = 0.0
+MAX_VALID_CONFIDENCE = 1.0
+AI_CLASSIFICATION_TEMPERATURE = 0.0
 
 CAUSE_KEYWORDS: dict[CauseCategory, list[str]] = {
     CauseCategory.WORKPLACE_DESIGN: [
@@ -227,11 +233,11 @@ class CauseRuleClassifierService:
         best_category = max(match_counts, key=match_counts.get)
         best_score = match_counts[best_category]
         if best_score == 1:
-            confidence = 0.5
+            confidence = ONE_KEYWORD_CONFIDENCE
         elif best_score == 2:
-            confidence = 0.7
+            confidence = TWO_KEYWORDS_CONFIDENCE
         else:
-            confidence = 0.85
+            confidence = THREE_OR_MORE_KEYWORDS_CONFIDENCE
 
         matched_keywords = matched_keywords_by_category[best_category]
         return RuleClassificationResult(
@@ -272,7 +278,7 @@ class AICauseClassifierService:
             response = await self.ai_client.complete_json(
                 system_prompt=CAUSE_CLASSIFICATION_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
-                temperature=0.0,
+                temperature=AI_CLASSIFICATION_TEMPERATURE,
             )
             logger.info("AI cause data=%s", response.data)
         except Exception:
@@ -284,7 +290,7 @@ class AICauseClassifierService:
         if (
             label not in {category.value for category in CauseCategory}
             or not isinstance(confidence, (int, float))
-            or not (0.0 <= confidence <= 1.0)
+            or not (MIN_VALID_CONFIDENCE <= confidence <= MAX_VALID_CONFIDENCE)
             or not isinstance(explanation, str)
         ):
             return None

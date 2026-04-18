@@ -1,6 +1,23 @@
 from pydantic import BaseModel
 
 from app.domain.enums import CauseCategory, HazardCategory
+from app.services.risk_scoring.service import (
+    HIGH_RISK_MAX_SCORE,
+    LOW_RISK_MAX_SCORE,
+    MEDIUM_RISK_MAX_SCORE,
+    RISK_LABEL_CRITICAL,
+    RISK_LABEL_HIGH,
+    RISK_LABEL_LOW,
+    RISK_LABEL_MEDIUM,
+)
+
+
+PRIORITY_REVIEW = "Review"
+
+TIMEFRAME_IMMEDIATE = "Immediate"
+TIMEFRAME_ONE_WEEK = "7 days"
+TIMEFRAME_ONE_MONTH = "30 days"
+TIMEFRAME_THREE_MONTHS = "90 days"
 
 
 class IncidentRecommendation(BaseModel):
@@ -13,14 +30,14 @@ class IncidentRecommendation(BaseModel):
 class RecommendationService:
     def choose_priority(self, risk_score: int | None) -> str:
         if risk_score is None:
-            return "Review"
-        if risk_score > 100:
-            return "Critical"
-        if risk_score > 40:
-            return "High"
-        if risk_score > 10:
-            return "Medium"
-        return "Low"
+            return PRIORITY_REVIEW
+        if risk_score > HIGH_RISK_MAX_SCORE:
+            return RISK_LABEL_CRITICAL
+        if risk_score > MEDIUM_RISK_MAX_SCORE:
+            return RISK_LABEL_HIGH
+        if risk_score > LOW_RISK_MAX_SCORE:
+            return RISK_LABEL_MEDIUM
+        return RISK_LABEL_LOW
 
     def generate_incident_recommendation(
         self,
@@ -42,13 +59,13 @@ class RecommendationService:
 
     @staticmethod
     def _timeframe(priority: str) -> str:
-        if priority == "Critical":
-            return "Immediate"
-        if priority == "High":
-            return "7 days"
-        if priority == "Medium":
-            return "30 days"
-        return "90 days"
+        if priority == RISK_LABEL_CRITICAL:
+            return TIMEFRAME_IMMEDIATE
+        if priority == RISK_LABEL_HIGH:
+            return TIMEFRAME_ONE_WEEK
+        if priority == RISK_LABEL_MEDIUM:
+            return TIMEFRAME_ONE_MONTH
+        return TIMEFRAME_THREE_MONTHS
 
     @staticmethod
     def _owner_type(

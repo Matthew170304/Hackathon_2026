@@ -5,6 +5,7 @@ from app.services.models.inference_models import SeverityInferenceResult
 SOURCE_VALUE_CONFIDENCE = 0.95
 RULE_CONFIDENCE = 0.75
 UNKNOWN_CONFIDENCE = 0.2
+HIGH_POTENTIAL_HAZARD_CONFIDENCE = 0.65
 
 
 VERY_HIGH_KEYWORDS = (
@@ -84,7 +85,7 @@ class SeverityRuleInferenceService:
             return self._result(
                 SeverityLevel.HIGH,
                 "Hazard category has high potential severity.",
-                confidence=0.65,
+                confidence=HIGH_POTENTIAL_HAZARD_CONFIDENCE,
             )
 
         return SeverityInferenceResult(

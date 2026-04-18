@@ -4,6 +4,12 @@ import json
 from pydantic import BaseModel
 
 from app.core.config import get_settings
+from app.domain.enums import CauseCategory, HazardCategory
+
+
+OPENAI_PROVIDER = "openai"
+MOCK_MATCH_CONFIDENCE = 0.8
+MOCK_UNKNOWN_CONFIDENCE = 0.2
 
 try:
     from openai import AsyncOpenAI
@@ -23,7 +29,7 @@ class HazardAIClient:
             AsyncOpenAI(api_key=settings.openai_api_key)
             if (
                 AsyncOpenAI is not None
-                and settings.ai_provider.lower() == "openai"
+                and settings.ai_provider.lower() == OPENAI_PROVIDER
                 and settings.openai_api_key
             )
             else None
@@ -101,22 +107,22 @@ class HazardAIClient:
 
 def _classify_cause_prompt(prompt: str) -> Dict[str, Any]:
     if any(keyword in prompt for keyword in ("procedure", "instruction", "step was skipped")):
-        label = "Procedures"
+        label = CauseCategory.PROCEDURES.value
     elif any(keyword in prompt for keyword in ("distracted", "rushed", "not paying attention", "human error")):
-        label = "Human Factors"
+        label = CauseCategory.HUMAN_FACTORS.value
     elif any(keyword in prompt for keyword in ("training", "not trained", "did not know")):
-        label = "Competences"
+        label = CauseCategory.COMPETENCES.value
     elif _contains_any(prompt, ("ppe", "gloves", "helmet")):
-        label = "Personal Protective Equipment"
+        label = CauseCategory.PPE.value
     elif any(keyword in prompt for keyword in ("clutter", "debris", "housekeeping")):
-        label = "Housekeeping"
+        label = CauseCategory.HOUSEKEEPING.value
     else:
-        label = "Unknown"
+        label = CauseCategory.UNKNOWN.value
 
-    if label == "Unknown":
-        confidence = 0.2
+    if label == CauseCategory.UNKNOWN.value:
+        confidence = MOCK_UNKNOWN_CONFIDENCE
     else:
-        confidence = 0.8
+        confidence = MOCK_MATCH_CONFIDENCE
 
     return {
         "label": label,
@@ -137,22 +143,22 @@ def _contains_any(text: str, keywords: tuple[str, ...]) -> bool:
 
 def _classify_hazard_prompt(prompt: str) -> Dict[str, Any]:
     if any(keyword in prompt for keyword in ("slip", "trip", "fall", "wet floor")):
-        label = "Physical Hazards"
+        label = HazardCategory.PHYSICAL.value
     elif any(keyword in prompt for keyword in ("forklift", "vehicle", "traffic", "pedestrian")):
-        label = "Vehicle & Traffic Hazards"
+        label = HazardCategory.VEHICLE_TRAFFIC.value
     elif any(keyword in prompt for keyword in ("electric", "shock", "wire", "voltage")):
-        label = "Electrical Hazards"
+        label = HazardCategory.ELECTRICAL.value
     elif any(keyword in prompt for keyword in ("chemical", "spill", "leak", "fumes")):
-        label = "Chemical Hazards"
+        label = HazardCategory.CHEMICAL.value
     elif any(keyword in prompt for keyword in ("machine", "guard", "moving part", "pinch")):
-        label = "Mechanical / Equipment Hazards"
+        label = HazardCategory.MECHANICAL_EQUIPMENT.value
     else:
-        label = "Unknown"
+        label = HazardCategory.UNKNOWN.value
 
-    if label == "Unknown":
-        confidence = 0.2
+    if label == HazardCategory.UNKNOWN.value:
+        confidence = MOCK_UNKNOWN_CONFIDENCE
     else:
-        confidence = 0.8
+        confidence = MOCK_MATCH_CONFIDENCE
 
     return {
         "label": label,

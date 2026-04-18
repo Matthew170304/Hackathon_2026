@@ -1,6 +1,10 @@
 from app.core.config import get_settings
 
 
+DEEPL_PROVIDER = "deepl"
+DEEPL_TARGET_LANGUAGE = "EN-US"
+
+
 class DeepLTranslatorClient:
     def __init__(self, api_key: str) -> None:
         import deepl
@@ -16,13 +20,13 @@ class DeepLTranslatorClient:
         result = self._translator.translate_text(
             text,
             source_lang=source_lang,
-            target_lang="EN-US",
+            target_lang=DEEPL_TARGET_LANGUAGE,
         )
         return result.text
 
 
 def build_translator_client() -> DeepLTranslatorClient | None:
     settings = get_settings()
-    if settings.translator_provider.lower() == "deepl" and settings.deepl_api_key:
+    if settings.translator_provider.lower() == DEEPL_PROVIDER and settings.deepl_api_key:
         return DeepLTranslatorClient(settings.deepl_api_key)
     return None

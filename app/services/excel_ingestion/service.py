@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.batch_repository import BatchRepository
 from app.repositories.incident_repository import IncidentRepository
+from app.domain.enums import ProcessingStatus
 from app.schemas.incident_schemas import IncidentCreateRequest
 from app.schemas.upload_schemas import ExcelIngestionResult, ExcelRowError
 from app.services.incident_processing import IncidentProcessingService
@@ -90,9 +91,9 @@ class ExcelIngestionService:
                 errors.append(ExcelRowError(row_number=int(index) + 2, error=str(exc)))
 
         if processed_rows == 0 and failed_rows > 0:
-            status = "failed"
+            status = ProcessingStatus.FAILED.value
         else:
-            status = "processed"
+            status = ProcessingStatus.PROCESSED.value
 
         self.batch_repository.update_progress(
             batch.id,

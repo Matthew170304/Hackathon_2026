@@ -1,6 +1,17 @@
 from app.domain.enums import RecurrenceFrequency, SeverityLevel
 
 
+LOW_RISK_MAX_SCORE = 10
+MEDIUM_RISK_MAX_SCORE = 40
+HIGH_RISK_MAX_SCORE = 100
+
+RISK_LABEL_UNKNOWN = "Unknown"
+RISK_LABEL_LOW = "Low"
+RISK_LABEL_MEDIUM = "Medium"
+RISK_LABEL_HIGH = "High"
+RISK_LABEL_CRITICAL = "Critical"
+
+
 class RiskScoringService:
     SEVERITY_BASE_SCORES = {
         SeverityLevel.VERY_LOW: 1,
@@ -38,12 +49,12 @@ class RiskScoringService:
 
     def get_risk_level_label(self, risk_score: int | None) -> str:
         if risk_score is None:
-            return "Unknown"
-        if risk_score <= 10:
-            return "Low"
-        if risk_score <= 40:
-            return "Medium"
-        if risk_score <= 100:
-            return "High"
+            return RISK_LABEL_UNKNOWN
+        if risk_score <= LOW_RISK_MAX_SCORE:
+            return RISK_LABEL_LOW
+        if risk_score <= MEDIUM_RISK_MAX_SCORE:
+            return RISK_LABEL_MEDIUM
+        if risk_score <= HIGH_RISK_MAX_SCORE:
+            return RISK_LABEL_HIGH
 
-        return "Critical"
+        return RISK_LABEL_CRITICAL

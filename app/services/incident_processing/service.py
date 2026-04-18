@@ -7,9 +7,13 @@ from app.services.language import LanguageService
 from app.services.recommendation import RecommendationService
 from app.services.recurrence_inference import RecurrenceInferenceService
 from app.services.risk_scoring import RiskScoringService
+from app.services.risk_scoring.service import HIGH_RISK_MAX_SCORE
 from app.services.severity_inference import SeverityInferenceService
 from app.services.text_cleaning import TextCleaningService
 from app.services.translation import TranslationService
+
+
+HUMAN_REVIEW_CONFIDENCE_THRESHOLD = 0.55
 
 
 class IncidentProcessingService:
@@ -125,7 +129,7 @@ class IncidentProcessingService:
         recurrence_confidence: float,
         risk_score: int | None,
     ) -> bool:
-        if risk_score is not None and risk_score > 100:
+        if risk_score is not None and risk_score > HIGH_RISK_MAX_SCORE:
             return True
         if HazardCategory.UNKNOWN == hazard_category or CauseCategory.UNKNOWN == cause_category:
             return True
@@ -136,7 +140,7 @@ class IncidentProcessingService:
             cause_confidence,
             severity_confidence,
             recurrence_confidence,
-        ) < 0.55
+        ) < HUMAN_REVIEW_CONFIDENCE_THRESHOLD
 
     @staticmethod
     def _build_classifier_text(

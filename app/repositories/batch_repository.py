@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.models import UploadBatch, utc_now
+from app.domain.enums import ProcessingStatus
 
 
 class BatchRepository:
@@ -29,7 +30,7 @@ class BatchRepository:
             total_rows=total_rows,
             processed_rows=0,
             failed_rows=0,
-            status="pending",
+            status=ProcessingStatus.PENDING.value,
         )
 
         self.session.add(batch)
@@ -59,7 +60,11 @@ class BatchRepository:
         batch.failed_rows = failed_rows
         batch.status = status
 
-        if status in {"processed", "failed"}:
+        finished_statuses = {
+            ProcessingStatus.PROCESSED.value,
+            ProcessingStatus.FAILED.value,
+        }
+        if status in finished_statuses:
             batch.finished_at = utc_now()
 
         self.session.commit()
