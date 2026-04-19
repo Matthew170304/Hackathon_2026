@@ -1,0 +1,502 @@
+{
+  "period_start": "2025-01-01",
+  "period_end": "2025-12-31",
+  "location_filter": null,
+  "incident_count": 2000,
+  "ai_generated": true,
+  "methodology": "Weighted evidence model: clustered incidents by site/activity/hazard/cause, then ranked clusters using observed frequency, average and maximum risk, critical count, recurrence, severity, observability bias, confidence, and traceable evidence case IDs. Lower observability increases hidden-risk weight because observation-based reports undercount weak signals and rare high-severity hazards.",
+  "period": {
+    "start": "2025-01-01",
+    "end": "2025-12-31",
+    "location_filter": null
+  },
+  "data_quality": {
+    "incident_count": 2000,
+    "missing_severity_rate": 0.61,
+    "missing_recurrence_rate": 0.874,
+    "unknown_hazard_rate": 0.014,
+    "unknown_cause_rate": 0.0,
+    "needs_review_rate": 0.893,
+    "average_confidence": 0.619,
+    "reporting_bias_assessment": "Moderate to high uncertainty: review share or confidence suggests weak data quality.",
+    "data_limitations": [
+      "Observation-based data overrepresents visible hazards and underrepresents weak signals.",
+      "No exposure denominators are available, so counts are not normalized by headcount, hours, or asset count.",
+      "Some severity values are unknown or inferred.",
+      "Some recurrence values are unknown or inferred.",
+      "High share of records need human review, reducing certainty."
+    ]
+  },
+  "strategic_priorities": [
+    {
+      "rank": 1,
+      "problem": "Process Safety / Operational Hazards linked to Human Factors in Nordborg / Walking / working surfaces",
+      "cluster_key": "Nordborg | Walking / working surfaces | Process Safety / Operational Hazards | Human Factors",
+      "priority_score": 187.26,
+      "confidence": 0.925,
+      "observed_frequency": 3,
+      "average_risk_score": 28.33,
+      "max_risk_score": 75,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Process Safety / Operational Hazards: 3 observed report(s); maximum risk score 75; low observability; cause pattern: Human Factors; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "154897",
+        "154897",
+        "192654"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "EHS",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Process Safety / Operational Hazards linked to Human Factors. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "problem": "Process Safety / Operational Hazards linked to Maintenance Management in Chennai / Repair & Maintenance",
+      "cluster_key": "Chennai | Repair & Maintenance | Process Safety / Operational Hazards | Maintenance Management",
+      "priority_score": 174.59,
+      "confidence": 0.775,
+      "observed_frequency": 1,
+      "average_risk_score": 125.0,
+      "max_risk_score": 125,
+      "critical_count": 1,
+      "severity_signal": "Critical potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Process Safety / Operational Hazards: 1 observed report(s); maximum risk score 125; low observability; cause pattern: Maintenance Management; low-observability hazards can be undercounted in employee reports; critical potential requires rapid verification.",
+      "evidence_case_ids": [
+        "164403"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Critical",
+          "owner_type": "EHS",
+          "timeframe": "7 days",
+          "action": "Run a focused control review for Process Safety / Operational Hazards linked to Maintenance Management. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 3,
+      "problem": "Process Safety / Operational Hazards linked to Facilities and equipment in Nordborg / Building & Property conditions",
+      "cluster_key": "Nordborg | Building & Property conditions | Process Safety / Operational Hazards | Facilities and equipment",
+      "priority_score": 168.6,
+      "confidence": 0.938,
+      "observed_frequency": 4,
+      "average_risk_score": 100.0,
+      "max_risk_score": 100,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Recurring within months",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Process Safety / Operational Hazards: 4 observed report(s); maximum risk score 100; low observability; cause pattern: Facilities and equipment; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "164473",
+        "164473",
+        "164473",
+        "164473"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "EHS",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Process Safety / Operational Hazards linked to Facilities and equipment. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "problem": "Process Safety / Operational Hazards linked to Workplace Design in Nordborg / Walking / working surfaces",
+      "cluster_key": "Nordborg | Walking / working surfaces | Process Safety / Operational Hazards | Workplace Design",
+      "priority_score": 163.13,
+      "confidence": 0.925,
+      "observed_frequency": 1,
+      "average_risk_score": 75.0,
+      "max_risk_score": 75,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Lower observed recurrence",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Process Safety / Operational Hazards: 1 observed report(s); maximum risk score 75; low observability; cause pattern: Workplace Design; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "192654"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "EHS",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Process Safety / Operational Hazards linked to Workplace Design. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "problem": "Electrical Hazards linked to Facilities and equipment in Wuqing / Repair & Maintenance",
+      "cluster_key": "Wuqing | Repair & Maintenance | Electrical Hazards | Facilities and equipment",
+      "priority_score": 159.93,
+      "confidence": 0.672,
+      "observed_frequency": 14,
+      "average_risk_score": 8.93,
+      "max_risk_score": 125,
+      "critical_count": 1,
+      "severity_signal": "Critical potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Electrical Hazards: 14 observed report(s); maximum risk score 125; low observability; cause pattern: Facilities and equipment; low-observability hazards can be undercounted in employee reports; critical potential requires rapid verification.",
+      "evidence_case_ids": [
+        "174643",
+        "158186",
+        "163843",
+        "167013",
+        "171808",
+        "171934",
+        "171935",
+        "171941"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Critical",
+          "owner_type": "Maintenance",
+          "timeframe": "7 days",
+          "action": "Run a focused control review for Electrical Hazards linked to Facilities and equipment. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "problem": "Process Safety / Operational Hazards linked to Workplace Design in Nordborg / Building & Property conditions",
+      "cluster_key": "Nordborg | Building & Property conditions | Process Safety / Operational Hazards | Workplace Design",
+      "priority_score": 148.91,
+      "confidence": 0.938,
+      "observed_frequency": 2,
+      "average_risk_score": 100.0,
+      "max_risk_score": 100,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Recurring within months",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Process Safety / Operational Hazards: 2 observed report(s); maximum risk score 100; low observability; cause pattern: Workplace Design; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "164473",
+        "164473"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "EHS",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Process Safety / Operational Hazards linked to Workplace Design. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "problem": "Electrical Hazards linked to Personal Protective Equipment in Wuqing / Machining & Assembly",
+      "cluster_key": "Wuqing | Machining & Assembly | Electrical Hazards | Personal Protective Equipment",
+      "priority_score": 133.73,
+      "confidence": 0.787,
+      "observed_frequency": 1,
+      "average_risk_score": 100.0,
+      "max_risk_score": 100,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Recurring within months",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Electrical Hazards: 1 observed report(s); maximum risk score 100; low observability; cause pattern: Personal Protective Equipment; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "190786"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "Maintenance",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Electrical Hazards linked to Personal Protective Equipment. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 8,
+      "problem": "Ergonomic Hazards linked to Human Factors in Nordborg / Walking / working surfaces",
+      "cluster_key": "Nordborg | Walking / working surfaces | Ergonomic Hazards | Human Factors",
+      "priority_score": 115.91,
+      "confidence": 0.884,
+      "observed_frequency": 7,
+      "average_risk_score": 22.86,
+      "max_risk_score": 50,
+      "critical_count": 0,
+      "severity_signal": "High potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Ergonomic Hazards: 7 observed report(s); maximum risk score 50; low observability; cause pattern: Human Factors; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "179451",
+        "184180",
+        "164429",
+        "165953",
+        "165957",
+        "181680",
+        "188077"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "High",
+          "owner_type": "Facilities",
+          "timeframe": "30 days",
+          "action": "Run a focused control review for Ergonomic Hazards linked to Human Factors. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 9,
+      "problem": "Ergonomic Hazards linked to Procedures in Nordborg / Walking / working surfaces",
+      "cluster_key": "Nordborg | Walking / working surfaces | Ergonomic Hazards | Procedures",
+      "priority_score": 109.29,
+      "confidence": 0.843,
+      "observed_frequency": 7,
+      "average_risk_score": 17.14,
+      "max_risk_score": 40,
+      "critical_count": 0,
+      "severity_signal": "Medium potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Ergonomic Hazards: 7 observed report(s); maximum risk score 40; low observability; cause pattern: Procedures; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "154782",
+        "156841",
+        "164429",
+        "165959",
+        "166914",
+        "166914",
+        "181200"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Medium",
+          "owner_type": "Facilities",
+          "timeframe": "90 days",
+          "action": "Run a focused control review for Ergonomic Hazards linked to Procedures. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 10,
+      "problem": "Fire & Explosion Hazards linked to Housekeeping in Monterrey / Machining & Assembly",
+      "cluster_key": "Monterrey | Machining & Assembly | Fire & Explosion Hazards | Housekeeping",
+      "priority_score": 108.47,
+      "confidence": 0.773,
+      "observed_frequency": 7,
+      "average_risk_score": 12.86,
+      "max_risk_score": 30,
+      "critical_count": 0,
+      "severity_signal": "Medium potential present",
+      "recurrence_signal": "Recurrence uncertain",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Fire & Explosion Hazards: 7 observed report(s); maximum risk score 30; low observability; cause pattern: Housekeeping; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "161537",
+        "161537",
+        "161537",
+        "165128",
+        "165867",
+        "165867",
+        "166878"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Medium",
+          "owner_type": "EHS",
+          "timeframe": "90 days",
+          "action": "Run a focused control review for Fire & Explosion Hazards linked to Housekeeping. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 11,
+      "problem": "Environmental Hazards linked to Facilities and equipment in Nordborg / Other",
+      "cluster_key": "Nordborg | Other | Environmental Hazards | Facilities and equipment",
+      "priority_score": 104.6,
+      "confidence": 0.938,
+      "observed_frequency": 13,
+      "average_risk_score": 25.0,
+      "max_risk_score": 25,
+      "critical_count": 0,
+      "severity_signal": "Medium potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Environmental Hazards: 13 observed report(s); maximum risk score 25; low observability; cause pattern: Facilities and equipment; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "181720",
+        "181720",
+        "181720",
+        "181720",
+        "181720",
+        "181720",
+        "181720",
+        "181720"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Medium",
+          "owner_type": "EHS",
+          "timeframe": "90 days",
+          "action": "Run a focused control review for Environmental Hazards linked to Facilities and equipment. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    },
+    {
+      "rank": 12,
+      "problem": "Ergonomic Hazards linked to Facilities and equipment in Nordborg / Ergonomic",
+      "cluster_key": "Nordborg | Ergonomic | Ergonomic Hazards | Facilities and equipment",
+      "priority_score": 100.24,
+      "confidence": 0.73,
+      "observed_frequency": 12,
+      "average_risk_score": 10.0,
+      "max_risk_score": 30,
+      "critical_count": 0,
+      "severity_signal": "Medium potential present",
+      "recurrence_signal": "Frequent recurrence signal",
+      "observability": "low",
+      "underreporting_likelihood": "High",
+      "why_it_matters": "Ergonomic Hazards: 12 observed report(s); maximum risk score 30; low observability; cause pattern: Facilities and equipment; low-observability hazards can be undercounted in employee reports.",
+      "evidence_case_ids": [
+        "156352",
+        "158098",
+        "166694",
+        "168718",
+        "171371",
+        "181675",
+        "184531",
+        "157061"
+      ],
+      "recommended_actions": [
+        {
+          "priority": "Medium",
+          "owner_type": "Facilities",
+          "timeframe": "90 days",
+          "action": "Run a focused control review for Ergonomic Hazards linked to Facilities and equipment. Include targeted verification because this is a low-observability hazard.",
+          "reason": "Selected by weighted frequency, risk potential, recurrence, observability, and confidence.",
+          "expected_impact": "Reduces the highest-ranked evidence-backed risk cluster and checks for hidden exposure."
+        }
+      ]
+    }
+  ],
+  "executive_summary": "This report identifies critical safety issues based on observation-based safety reports from 2025. It highlights the need for targeted interventions in areas with high potential risks, particularly focusing on low-observability hazards that may be underreported. The recommendations aim to enhance safety culture and mitigate risks effectively within a short timeframe.",
+  "observed_problem_summary": "The analysis reveals several high-risk clusters related to Process Safety and Electrical Hazards, particularly in Nordborg and Wuqing. These clusters are characterized by low observability and high potential severity, indicating a significant risk of underreporting and hidden hazards.",
+  "observability_bias_note": "The data quality is compromised by a high rate of missing severity and recurrence information, indicating a moderate to high uncertainty in the reported incidents. This suggests that low report counts do not equate to low risks due to the potential underreporting of weak signals and rare high-severity hazards.",
+  "most_observed_problems": [
+    {
+      "problem": "Process Safety / Operational Hazards linked to Human Factors in Nordborg / Walking / working surfaces",
+      "evidence": "3 observed reports; maximum risk score 75; low observability",
+      "incident_count": 3,
+      "risk_signal": "High potential present"
+    },
+    {
+      "problem": "Process Safety / Operational Hazards linked to Maintenance Management in Chennai / Repair & Maintenance",
+      "evidence": "1 observed report; maximum risk score 125; low observability",
+      "incident_count": 1,
+      "risk_signal": "Critical potential present"
+    },
+    {
+      "problem": "Electrical Hazards linked to Facilities and equipment in Wuqing / Repair & Maintenance",
+      "evidence": "14 observed reports; maximum risk score 125; low observability",
+      "incident_count": 14,
+      "risk_signal": "Critical potential present"
+    }
+  ],
+  "hidden_risk_hypotheses": [
+    {
+      "hypothesis": "Incidents related to ergonomic hazards are underreported due to discomfort being normalized.",
+      "why_it_may_be_underreported": "Employees may not report ergonomic issues unless they lead to significant injuries.",
+      "how_to_check": "Implement a short survey to assess perceived ergonomic risks and discomfort levels among employees."
+    },
+    {
+      "hypothesis": "Electrical hazards are more prevalent than reported due to lack of visibility in maintenance logs.",
+      "why_it_may_be_underreported": "Maintenance activities may not be documented thoroughly, leading to missed hazards.",
+      "how_to_check": "Audit maintenance logs and cross-reference with incident reports to identify discrepancies."
+    }
+  ],
+  "recommended_actions": [
+    {
+      "priority": "Critical",
+      "owner_type": "EHS",
+      "timeframe": "7 days",
+      "action": "Conduct a focused control review for Process Safety / Operational Hazards linked to Maintenance Management in Chennai. Include targeted verification.",
+      "reason": "This area has a maximum risk score of 125 and is underreported, requiring immediate attention.",
+      "expected_impact": "Identify and mitigate hidden risks before they lead to incidents."
+    },
+    {
+      "priority": "High",
+      "owner_type": "EHS",
+      "timeframe": "30 days",
+      "action": "Implement a peer observation routine in Nordborg to enhance reporting of Human Factors related to walking/working surfaces.",
+      "reason": "Encourages employees to observe and report unsafe conditions, addressing low observability.",
+      "expected_impact": "Increased reporting and awareness of hazards, leading to proactive safety measures."
+    },
+    {
+      "priority": "High",
+      "owner_type": "Maintenance",
+      "timeframe": "30 days",
+      "action": "Run a verification campaign for Electrical Hazards linked to Facilities and equipment in Wuqing, including a review of maintenance procedures.",
+      "reason": "Critical potential exists; verification will help uncover hidden risks.",
+      "expected_impact": "Improved safety through identification and rectification of electrical hazards."
+    },
+    {
+      "priority": "High",
+      "owner_type": "Facilities",
+      "timeframe": "30 days",
+      "action": "Launch a training refresher focused on ergonomic hazards linked to Human Factors in Nordborg, emphasizing reporting and mitigation strategies.",
+      "reason": "Frequent recurrence of ergonomic hazards indicates a need for enhanced awareness and training.",
+      "expected_impact": "Reduction in underreported ergonomic issues and improved employee comfort."
+    },
+    {
+      "priority": "High",
+      "owner_type": "EHS",
+      "timeframe": "30 days",
+      "action": "Create visual controls and reminders for safe walking/working surfaces in Nordborg to enhance awareness.",
+      "reason": "Visual cues can help mitigate risks associated with low observability hazards.",
+      "expected_impact": "Increased employee awareness and proactive behavior towards maintaining safe working conditions."
+    }
+  ]
+}

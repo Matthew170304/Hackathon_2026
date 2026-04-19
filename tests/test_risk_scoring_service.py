@@ -1,4 +1,4 @@
-from app.domain.enums import RecurrenceFrequency, SeverityLevel
+from app.domain.enums import HazardCategory, RecurrenceFrequency, SeverityLevel
 from app.services.risk_scoring import RiskScoringService
 
 
@@ -24,6 +24,15 @@ def test_get_frequency_multiplier() -> None:
     assert service.get_frequency_multiplier(RecurrenceFrequency.UNKNOWN) is None
 
 
+def test_get_observability_multiplier() -> None:
+    service = RiskScoringService()
+
+    assert service.get_observability_multiplier(HazardCategory.PHYSICAL) == 1.0
+    assert service.get_observability_multiplier(HazardCategory.MECHANICAL_EQUIPMENT) == 1.1
+    assert service.get_observability_multiplier(HazardCategory.ELECTRICAL) == 1.2
+    assert service.get_observability_multiplier(None) == 1.0
+
+
 def test_calculate_risk_score_high_frequency() -> None:
     service = RiskScoringService()
 
@@ -40,6 +49,16 @@ def test_calculate_risk_score_medium_frequency() -> None:
         SeverityLevel.MEDIUM,
         RecurrenceFrequency.FOURTEEN_DAYS_TO_SIX_MONTHS,
     ) == 40
+
+
+def test_calculate_risk_score_increases_for_hard_to_see_hazard() -> None:
+    service = RiskScoringService()
+
+    assert service.calculate_risk_score(
+        SeverityLevel.HIGH,
+        RecurrenceFrequency.FOURTEEN_DAYS_TO_SIX_MONTHS,
+        hazard_category=HazardCategory.ELECTRICAL,
+    ) == 120
 
 
 def test_calculate_risk_score_unknown_severity() -> None:

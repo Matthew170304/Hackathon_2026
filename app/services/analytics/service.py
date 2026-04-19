@@ -83,7 +83,7 @@ TIMEFRAME_ONE_MONTH = "30 days"
 TIMEFRAME_THREE_MONTHS = "90 days"
 
 OPENAI_PROVIDER = "openai"
-AI_STRATEGIC_TEMPERATURE = 0.1
+AI_STRATEGIC_TEMPERATURE = 0.45
 
 HIGH_NEEDS_REVIEW_RATE = 0.25
 LOW_SAMPLE_SIZE_COUNT = 10
@@ -378,6 +378,14 @@ class AnalyticsService:
             "underreporting, low-frequency high-severity hazards, reporting culture, and weak signals. "
             "Use only the structured evidence package. Do not invent counts or evidence case IDs. "
             "Separate observed patterns from hidden-risk hypotheses. "
+            "Make the recommended actions more creative and practical than a generic control review. "
+            "Use varied prevention ideas such as visual controls, micro-experiments, reporting nudges, "
+            "leader standard work, maintenance triggers, peer observation routines, layout changes, "
+            "training refreshers, and short verification campaigns. "
+            "Each recommended action must still be specific to the observed hazard/cause pattern, "
+            "must name a clear owner and timeframe, and must explain how success will be checked. "
+            "Do not propose expensive technology, sensors, AI tools, or large programs unless the evidence "
+            "clearly supports them. Prefer actions a site can start within days. "
             "Return concise JSON only."
         )
         user_prompt = (

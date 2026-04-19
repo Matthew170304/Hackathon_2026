@@ -70,10 +70,11 @@ class IncidentProcessingService:
             activity=incident.activity,
         )
 
-        # Step 5: Convert severity and recurrence into the Danfoss risk score.
+        # Step 5: Convert severity, recurrence, and observability into the Danfoss risk score.
         risk_score = self.risk_scoring.calculate_risk_score(
             severity_result.severity_level,
             recurrence_result.recurrence_frequency,
+            hazard_category=hazard_result.label,
         )
         risk_label = self.risk_scoring.get_risk_level_label(risk_score)
 

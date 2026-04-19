@@ -1,4 +1,5 @@
 from datetime import date
+import logging
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -11,9 +12,11 @@ from app.schemas.analytics_schemas import (
     StrategicRecommendation,
 )
 from app.services.analytics import AnalyticsService
+from app.services.mail import MailService
 
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/powerbi/incidents", response_model=list[PowerBIIncidentRecord])
@@ -58,8 +61,25 @@ async def strategic_recommendation(
     location: str | None = None,
     session: Session = Depends(get_db_session),
 ) -> StrategicRecommendation:
-    return await AnalyticsService(session).generate_strategic_recommendation(
+    recommendation = await AnalyticsService(session).generate_strategic_recommendation(
         date_from=date_from,
         date_to=date_to,
         location=location,
     )
+    await _send_strategic_recommendation_email(recommendation)
+    return recommendation
+
+
+async def _send_strategic_recommendation_email(
+    recommendation: StrategicRecommendation,
+) -> None:
+    try:
+        result = await MailService().send_strategic_recommendation(recommendation)
+        if not result.sent:
+            logger.warning(
+                "Strategic recommendation email was not sent: status=%s response=%s",
+                result.status_code,
+                result.response_text,
+            )
+    except Exception:
+        logger.exception("Strategic recommendation email failed.")
